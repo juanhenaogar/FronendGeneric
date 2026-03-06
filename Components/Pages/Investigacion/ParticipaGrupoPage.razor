@@ -1,0 +1,170 @@
+@page "/participa-grupo"
+@inject InvestigacionDataService DataService
+
+<PageTitle>Participa grupo</PageTitle>
+
+<h1>Participación de docentes en grupos</h1>
+
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <div class="notice">@_message</div>
+}
+
+<div class="card">
+    <div class="toolbar">
+        <h3>@(_editing ? "Editar participación" : "Nueva participación")</h3>
+        <button class="btn btn-light" @onclick="ResetForm">Limpiar</button>
+    </div>
+
+    <EditForm Model="_model" OnValidSubmit="Save">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-grid">
+            <div class="field">
+                <label>Docente cédula</label>
+                <InputSelect @bind-Value="_model.DocenteCedula">
+                    @foreach (var docente in DataService.Docentes)
+                    {
+                        <option value="@docente">@docente</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="field">
+                <label>Grupo investigación</label>
+                <InputSelect @bind-Value="_model.GrupoInvestigacionId">
+                    @foreach (var grupo in DataService.GetGrupos())
+                    {
+                        <option value="@grupo.Id">@grupo.Nombre</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="field">
+                <label>Rol</label>
+                <InputSelect @bind-Value="_model.Rol">
+                    @foreach (var rol in DataService.RolesGrupo)
+                    {
+                        <option value="@rol">@rol</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="field">
+                <label>Fecha inicio</label>
+                <InputDate @bind-Value="_model.FechaInicio" />
+            </div>
+
+            <div class="field">
+                <label>Fecha fin</label>
+                <InputDate @bind-Value="_model.FechaFin" />
+            </div>
+        </div>
+
+        <div class="actions-row mt-3">
+            <button type="submit" class="btn btn-primary">@(_editing ? "Actualizar" : "Guardar")</button>
+            <button type="button" class="btn btn-secondary" @onclick="ResetForm">Cancelar</button>
+        </div>
+    </EditForm>
+</div>
+
+<div class="table-wrap mt-3">
+    <table>
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Docente</th>
+                <th>Grupo</th>
+                <th>Rol</th>
+                <th>Fecha inicio</th>
+                <th>Fecha fin</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in _items)
+            {
+                <tr>
+                    <td>@item.Id</td>
+                    <td>@item.DocenteCedula</td>
+                    <td>@DataService.GetNombreGrupo(item.GrupoInvestigacionId)</td>
+                    <td>@item.Rol</td>
+                    <td>@item.FechaInicio.ToString("yyyy-MM-dd")</td>
+                    <td>@(item.FechaFin?.ToString("yyyy-MM-dd") ?? "-")</td>
+                    <td>
+                        <div class="actions-row">
+                            <button class="btn btn-light" @onclick="() => Edit(item)">Editar</button>
+                            <button class="btn btn-danger" @onclick="() => Delete(item.Id)">Eliminar</button>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private List<ParticipaGrupo> _items = new();
+    private ParticipaGrupo _model = new();
+    private bool _editing;
+    private string? _message;
+
+    protected override void OnInitialized()
+    {
+        LoadData();
+        ResetForm();
+    }
+
+    private void LoadData() => _items = DataService.GetParticipaGrupos();
+
+    private void Save()
+    {
+        if (_editing)
+        {
+            DataService.UpdateParticipaGrupo(_model);
+            _message = "Participación actualizada correctamente.";
+        }
+        else
+        {
+            DataService.AddParticipaGrupo(_model);
+            _message = "Participación creada correctamente.";
+        }
+        LoadData();
+        ResetForm();
+    }
+
+    private void Edit(ParticipaGrupo item)
+    {
+        _editing = true;
+        _model = new ParticipaGrupo
+        {
+            Id = item.Id,
+            DocenteCedula = item.DocenteCedula,
+            GrupoInvestigacionId = item.GrupoInvestigacionId,
+            Rol = item.Rol,
+            FechaInicio = item.FechaInicio,
+            FechaFin = item.FechaFin
+        };
+    }
+
+    private void Delete(int id)
+    {
+        DataService.DeleteParticipaGrupo(id);
+        _message = "Participación eliminada correctamente.";
+        LoadData();
+        ResetForm();
+    }
+
+    private void ResetForm()
+    {
+        _editing = false;
+        _model = new ParticipaGrupo
+        {
+            DocenteCedula = DataService.Docentes.First(),
+            GrupoInvestigacionId = DataService.GetGrupos().FirstOrDefault()?.Id ?? 0,
+            Rol = DataService.RolesGrupo.First(),
+            FechaInicio = DateTime.Today
+        };
+    }
+}

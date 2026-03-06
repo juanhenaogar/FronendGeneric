@@ -1,0 +1,183 @@
+@page "/relaciones-lineas"
+@inject InvestigacionDataService DataService
+
+<PageTitle>Relaciones de líneas</PageTitle>
+
+<h1>Relaciones de líneas de investigación</h1>
+<p>Aquí se unifican las tablas: <strong>grupo_linea</strong>, <strong>semillero_linea</strong>, <strong>aa_linea</strong>, <strong>ac_linea</strong> y <strong>ods_linea</strong>.</p>
+
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <div class="notice">@_message</div>
+}
+
+<div class="card">
+    <div class="toolbar">
+        <h3>@(_editing ? "Editar relación" : "Nueva relación")</h3>
+        <button class="btn btn-light" @onclick="ResetForm">Limpiar</button>
+    </div>
+
+    <EditForm Model="_model" OnValidSubmit="Save">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-grid">
+            <div class="field">
+                <label>Tipo relación</label>
+                <InputSelect TValue="string" Value="_model.TipoRelacion" ValueChanged="OnTipoRelacionChanged" ValueExpression="@(() => _model.TipoRelacion)">
+                    <option value="grupo_linea">grupo_linea</option>
+                    <option value="semillero_linea">semillero_linea</option>
+                    <option value="aa_linea">aa_linea</option>
+                    <option value="ac_linea">ac_linea</option>
+                    <option value="ods_linea">ods_linea</option>
+                </InputSelect>
+            </div>
+
+            <div class="field">
+                <label>Origen</label>
+                <InputSelect @bind-Value="_model.Origen">
+                    @foreach (var item in GetOrigenOptions())
+                    {
+                        <option value="@item">@item</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="field">
+                <label>Destino</label>
+                <InputSelect @bind-Value="_model.Destino">
+                    @foreach (var item in GetDestinoOptions())
+                    {
+                        <option value="@item">@item</option>
+                    }
+                </InputSelect>
+            </div>
+        </div>
+
+        <div class="actions-row mt-3">
+            <button type="submit" class="btn btn-primary">@(_editing ? "Actualizar" : "Guardar")</button>
+            <button type="button" class="btn btn-secondary" @onclick="ResetForm">Cancelar</button>
+        </div>
+    </EditForm>
+</div>
+
+<div class="table-wrap mt-3">
+    <table>
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Tipo relación</th>
+                <th>Origen</th>
+                <th>Destino</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in _items)
+            {
+                <tr>
+                    <td>@item.Id</td>
+                    <td><span class="badge">@item.TipoRelacion</span></td>
+                    <td>@item.Origen</td>
+                    <td>@item.Destino</td>
+                    <td>
+                        <div class="actions-row">
+                            <button class="btn btn-light" @onclick="() => Edit(item)">Editar</button>
+                            <button class="btn btn-danger" @onclick="() => Delete(item.Id)">Eliminar</button>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private List<RelacionSimple> _items = new();
+    private RelacionSimple _model = new();
+    private bool _editing;
+    private string? _message;
+
+    protected override void OnInitialized()
+    {
+        LoadData();
+        ResetForm();
+    }
+
+    private void LoadData() => _items = DataService.GetRelaciones();
+
+    private void Save()
+    {
+        if (_editing)
+        {
+            DataService.UpdateRelacion(_model);
+            _message = "Relación actualizada correctamente.";
+        }
+        else
+        {
+            DataService.AddRelacion(_model);
+            _message = "Relación creada correctamente.";
+        }
+        LoadData();
+        ResetForm();
+    }
+
+    private void Edit(RelacionSimple item)
+    {
+        _editing = true;
+        _model = new RelacionSimple
+        {
+            Id = item.Id,
+            TipoRelacion = item.TipoRelacion,
+            Origen = item.Origen,
+            Destino = item.Destino
+        };
+    }
+
+    private void Delete(int id)
+    {
+        DataService.DeleteRelacion(id);
+        _message = "Relación eliminada correctamente.";
+        LoadData();
+        ResetForm();
+    }
+
+    private void ResetForm()
+    {
+        _editing = false;
+        _model = new RelacionSimple { TipoRelacion = "grupo_linea" };
+        SetDefaultOptions();
+    }
+
+    private void OnTipoRelacionChanged(string value)
+    {
+        _model.TipoRelacion = value;
+        SetDefaultOptions();
+    }
+
+    private void SetDefaultOptions()
+    {
+        _model.Origen = GetOrigenOptions().FirstOrDefault() ?? string.Empty;
+        _model.Destino = GetDestinoOptions().FirstOrDefault() ?? string.Empty;
+    }
+
+    private List<string> GetOrigenOptions() => _model.TipoRelacion switch
+    {
+        "grupo_linea" => DataService.GetGrupos().Select(x => x.Nombre).ToList(),
+        "semillero_linea" => DataService.GetSemilleros().Select(x => x.Nombre).ToList(),
+        "aa_linea" => DataService.LineasInvestigacion,
+        "ac_linea" => DataService.LineasInvestigacion,
+        "ods_linea" => DataService.LineasInvestigacion,
+        _ => new List<string>()
+    };
+
+    private List<string> GetDestinoOptions() => _model.TipoRelacion switch
+    {
+        "grupo_linea" => DataService.LineasInvestigacion,
+        "semillero_linea" => DataService.LineasInvestigacion,
+        "aa_linea" => DataService.AreasAplicacion,
+        "ac_linea" => DataService.AreasConocimiento,
+        "ods_linea" => DataService.Ods,
+        _ => new List<string>()
+    };
+}

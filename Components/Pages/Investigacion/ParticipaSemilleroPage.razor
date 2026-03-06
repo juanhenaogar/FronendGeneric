@@ -1,0 +1,170 @@
+@page "/participa-semillero"
+@inject InvestigacionDataService DataService
+
+<PageTitle>Participa semillero</PageTitle>
+
+<h1>Participación de docentes en semilleros</h1>
+
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <div class="notice">@_message</div>
+}
+
+<div class="card">
+    <div class="toolbar">
+        <h3>@(_editing ? "Editar participación" : "Nueva participación")</h3>
+        <button class="btn btn-light" @onclick="ResetForm">Limpiar</button>
+    </div>
+
+    <EditForm Model="_model" OnValidSubmit="Save">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-grid">
+            <div class="field">
+                <label>Docente</label>
+                <InputSelect @bind-Value="_model.Docente">
+                    @foreach (var docente in DataService.Docentes)
+                    {
+                        <option value="@docente">@docente</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="field">
+                <label>Semillero</label>
+                <InputSelect @bind-Value="_model.SemilleroId">
+                    @foreach (var semillero in DataService.GetSemilleros())
+                    {
+                        <option value="@semillero.Id">@semillero.Nombre</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="field">
+                <label>Rol</label>
+                <InputSelect @bind-Value="_model.Rol">
+                    @foreach (var rol in DataService.RolesSemillero)
+                    {
+                        <option value="@rol">@rol</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="field">
+                <label>Fecha inicio</label>
+                <InputDate @bind-Value="_model.FechaInicio" />
+            </div>
+
+            <div class="field">
+                <label>Fecha fin</label>
+                <InputDate @bind-Value="_model.FechaFin" />
+            </div>
+        </div>
+
+        <div class="actions-row mt-3">
+            <button type="submit" class="btn btn-primary">@(_editing ? "Actualizar" : "Guardar")</button>
+            <button type="button" class="btn btn-secondary" @onclick="ResetForm">Cancelar</button>
+        </div>
+    </EditForm>
+</div>
+
+<div class="table-wrap mt-3">
+    <table>
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Docente</th>
+                <th>Semillero</th>
+                <th>Rol</th>
+                <th>Fecha inicio</th>
+                <th>Fecha fin</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in _items)
+            {
+                <tr>
+                    <td>@item.Id</td>
+                    <td>@item.Docente</td>
+                    <td>@DataService.GetNombreSemillero(item.SemilleroId)</td>
+                    <td>@item.Rol</td>
+                    <td>@item.FechaInicio.ToString("yyyy-MM-dd")</td>
+                    <td>@(item.FechaFin?.ToString("yyyy-MM-dd") ?? "-")</td>
+                    <td>
+                        <div class="actions-row">
+                            <button class="btn btn-light" @onclick="() => Edit(item)">Editar</button>
+                            <button class="btn btn-danger" @onclick="() => Delete(item.Id)">Eliminar</button>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private List<ParticipaSemillero> _items = new();
+    private ParticipaSemillero _model = new();
+    private bool _editing;
+    private string? _message;
+
+    protected override void OnInitialized()
+    {
+        LoadData();
+        ResetForm();
+    }
+
+    private void LoadData() => _items = DataService.GetParticipaSemilleros();
+
+    private void Save()
+    {
+        if (_editing)
+        {
+            DataService.UpdateParticipaSemillero(_model);
+            _message = "Participación actualizada correctamente.";
+        }
+        else
+        {
+            DataService.AddParticipaSemillero(_model);
+            _message = "Participación creada correctamente.";
+        }
+        LoadData();
+        ResetForm();
+    }
+
+    private void Edit(ParticipaSemillero item)
+    {
+        _editing = true;
+        _model = new ParticipaSemillero
+        {
+            Id = item.Id,
+            Docente = item.Docente,
+            SemilleroId = item.SemilleroId,
+            Rol = item.Rol,
+            FechaInicio = item.FechaInicio,
+            FechaFin = item.FechaFin
+        };
+    }
+
+    private void Delete(int id)
+    {
+        DataService.DeleteParticipaSemillero(id);
+        _message = "Participación eliminada correctamente.";
+        LoadData();
+        ResetForm();
+    }
+
+    private void ResetForm()
+    {
+        _editing = false;
+        _model = new ParticipaSemillero
+        {
+            Docente = DataService.Docentes.First(),
+            SemilleroId = DataService.GetSemilleros().FirstOrDefault()?.Id ?? 0,
+            Rol = DataService.RolesSemillero.First(),
+            FechaInicio = DateTime.Today
+        };
+    }
+}

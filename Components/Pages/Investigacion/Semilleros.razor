@@ -1,0 +1,140 @@
+@page "/semilleros"
+@inject InvestigacionDataService DataService
+
+<PageTitle>Semilleros</PageTitle>
+
+<h1>Semilleros</h1>
+
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <div class="notice">@_message</div>
+}
+
+<div class="card">
+    <div class="toolbar">
+        <h3>@(_editing ? "Editar semillero" : "Nuevo semillero")</h3>
+        <button class="btn btn-light" @onclick="ResetForm">Limpiar</button>
+    </div>
+
+    <EditForm Model="_model" OnValidSubmit="Save">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-grid">
+            <div class="field">
+                <label>Nombre</label>
+                <InputText @bind-Value="_model.Nombre" />
+                <ValidationMessage For="() => _model.Nombre" />
+            </div>
+
+            <div class="field">
+                <label>Fecha fundación</label>
+                <InputDate @bind-Value="_model.FechaFundacion" />
+            </div>
+
+            <div class="field">
+                <label>Grupo de investigación</label>
+                <InputSelect @bind-Value="_model.GrupoInvestigacionId">
+                    @foreach (var item in DataService.GetGrupos())
+                    {
+                        <option value="@item.Id">@item.Nombre</option>
+                    }
+                </InputSelect>
+            </div>
+        </div>
+
+        <div class="actions-row mt-3">
+            <button type="submit" class="btn btn-primary">@(_editing ? "Actualizar" : "Guardar")</button>
+            <button type="button" class="btn btn-secondary" @onclick="ResetForm">Cancelar</button>
+        </div>
+    </EditForm>
+</div>
+
+<div class="table-wrap mt-3">
+    <table>
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Nombre</th>
+                <th>Fecha fundación</th>
+                <th>Grupo de investigación</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in _items)
+            {
+                <tr>
+                    <td>@item.Id</td>
+                    <td>@item.Nombre</td>
+                    <td>@item.FechaFundacion.ToString("yyyy-MM-dd")</td>
+                    <td>@DataService.GetNombreGrupo(item.GrupoInvestigacionId)</td>
+                    <td>
+                        <div class="actions-row">
+                            <button class="btn btn-light" @onclick="() => Edit(item)">Editar</button>
+                            <button class="btn btn-danger" @onclick="() => Delete(item.Id)">Eliminar</button>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private List<Semillero> _items = new();
+    private Semillero _model = new();
+    private bool _editing;
+    private string? _message;
+
+    protected override void OnInitialized()
+    {
+        LoadData();
+        ResetForm();
+    }
+
+    private void LoadData() => _items = DataService.GetSemilleros();
+
+    private void Save()
+    {
+        if (_editing)
+        {
+            DataService.UpdateSemillero(_model);
+            _message = "Semillero actualizado correctamente.";
+        }
+        else
+        {
+            DataService.AddSemillero(_model);
+            _message = "Semillero creado correctamente.";
+        }
+        LoadData();
+        ResetForm();
+    }
+
+    private void Edit(Semillero item)
+    {
+        _editing = true;
+        _model = new Semillero
+        {
+            Id = item.Id,
+            Nombre = item.Nombre,
+            FechaFundacion = item.FechaFundacion,
+            GrupoInvestigacionId = item.GrupoInvestigacionId
+        };
+    }
+
+    private void Delete(int id)
+    {
+        DataService.DeleteSemillero(id);
+        _message = "Semillero eliminado correctamente.";
+        LoadData();
+        ResetForm();
+    }
+
+    private void ResetForm()
+    {
+        _editing = false;
+        var firstGroupId = DataService.GetGrupos().FirstOrDefault()?.Id ?? 0;
+        _model = new Semillero { FechaFundacion = DateTime.Today, GrupoInvestigacionId = firstGroupId };
+    }
+}

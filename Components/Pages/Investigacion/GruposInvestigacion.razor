@@ -1,0 +1,185 @@
+@page "/grupos-investigacion"
+@inject InvestigacionDataService DataService
+
+<PageTitle>Grupos de investigación</PageTitle>
+
+<h1>Grupos de investigación</h1>
+
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <div class="notice">@_message</div>
+}
+
+<div class="card">
+    <div class="toolbar">
+        <h3>@(_editing ? "Editar grupo" : "Nuevo grupo")</h3>
+        <button class="btn btn-light" @onclick="ResetForm">Limpiar</button>
+    </div>
+
+    <EditForm Model="_model" OnValidSubmit="SaveGrupo">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-grid">
+            <div class="field">
+                <label>Nombre</label>
+                <InputText @bind-Value="_model.Nombre" />
+                <ValidationMessage For="() => _model.Nombre" />
+            </div>
+
+            <div class="field">
+                <label>URL Gruplac</label>
+                <InputText @bind-Value="_model.UrlGruplac" />
+                <ValidationMessage For="() => _model.UrlGruplac" />
+            </div>
+
+            <div class="field">
+                <label>Categoría</label>
+                <InputSelect @bind-Value="_model.Categoria">
+                    @foreach (var item in DataService.Categorias)
+                    {
+                        <option value="@item">@item</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="field">
+                <label>Convocatoria</label>
+                <InputText @bind-Value="_model.Convocatoria" />
+            </div>
+
+            <div class="field">
+                <label>Fecha fundación</label>
+                <InputDate @bind-Value="_model.FechaFundacion" />
+            </div>
+
+            <div class="field">
+                <label>Universidad</label>
+                <InputSelect @bind-Value="_model.Universidad">
+                    <option value="">Seleccione...</option>
+                    @foreach (var item in DataService.Universidades)
+                    {
+                        <option value="@item">@item</option>
+                    }
+                </InputSelect>
+                <ValidationMessage For="() => _model.Universidad" />
+            </div>
+
+            <div class="field">
+                <label>Ámbito</label>
+                <InputSelect @bind-Value="_model.Ambito">
+                    @foreach (var item in DataService.Ambitos)
+                    {
+                        <option value="@item">@item</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="field">
+                <label>Interno</label>
+                <InputCheckbox @bind-Value="_model.Interno" />
+            </div>
+        </div>
+
+        <div class="actions-row mt-3">
+            <button type="submit" class="btn btn-primary">@(_editing ? "Actualizar" : "Guardar")</button>
+            <button type="button" class="btn btn-secondary" @onclick="ResetForm">Cancelar</button>
+        </div>
+    </EditForm>
+</div>
+
+<div class="table-wrap mt-3">
+    <table>
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Nombre</th>
+                <th>Categoría</th>
+                <th>Convocatoria</th>
+                <th>Universidad</th>
+                <th>Interno</th>
+                <th>Ámbito</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in _items)
+            {
+                <tr>
+                    <td>@item.Id</td>
+                    <td>@item.Nombre</td>
+                    <td><span class="badge">@item.Categoria</span></td>
+                    <td>@item.Convocatoria</td>
+                    <td>@item.Universidad</td>
+                    <td>@(item.Interno ? "Sí" : "No")</td>
+                    <td>@item.Ambito</td>
+                    <td>
+                        <div class="actions-row">
+                            <button class="btn btn-light" @onclick="() => EditGrupo(item)">Editar</button>
+                            <button class="btn btn-danger" @onclick="() => DeleteGrupo(item.Id)">Eliminar</button>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private List<GrupoInvestigacion> _items = new();
+    private GrupoInvestigacion _model = new();
+    private bool _editing;
+    private string? _message;
+
+    protected override void OnInitialized() => LoadData();
+
+    private void LoadData() => _items = DataService.GetGrupos();
+
+    private void SaveGrupo()
+    {
+        if (_editing)
+        {
+            DataService.UpdateGrupo(_model);
+            _message = "Grupo actualizado correctamente.";
+        }
+        else
+        {
+            DataService.AddGrupo(_model);
+            _message = "Grupo creado correctamente.";
+        }
+
+        ResetForm();
+        LoadData();
+    }
+
+    private void EditGrupo(GrupoInvestigacion item)
+    {
+        _editing = true;
+        _model = new GrupoInvestigacion
+        {
+            Id = item.Id,
+            Nombre = item.Nombre,
+            UrlGruplac = item.UrlGruplac,
+            Categoria = item.Categoria,
+            Convocatoria = item.Convocatoria,
+            FechaFundacion = item.FechaFundacion,
+            Universidad = item.Universidad,
+            Interno = item.Interno,
+            Ambito = item.Ambito
+        };
+    }
+
+    private void DeleteGrupo(int id)
+    {
+        DataService.DeleteGrupo(id);
+        _message = "Grupo eliminado correctamente.";
+        LoadData();
+        ResetForm();
+    }
+
+    private void ResetForm()
+    {
+        _editing = false;
+        _model = new GrupoInvestigacion { FechaFundacion = DateTime.Today, Categoria = "A", Ambito = "Nacional" };
+    }
+}
